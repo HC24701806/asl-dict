@@ -13,32 +13,32 @@ def draw_landmarks_on_image(rgb_image, detection_result):
     for i in range(len(face_landmarks_list)):
         face_landmarks = face_landmarks_list[i]
 
-    face_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-    face_landmarks_proto.landmark.extend([
-        landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in face_landmarks
-    ])
+        face_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+        face_landmarks_proto.landmark.extend([
+            landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in face_landmarks
+        ])
 
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=mp.solutions.face_mesh.FACEMESH_TESSELATION,
-        landmark_drawing_spec=None,
-        connection_drawing_spec=mp.solutions.drawing_styles
-        .get_default_face_mesh_tesselation_style())
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=mp.solutions.face_mesh.FACEMESH_CONTOURS,
-        landmark_drawing_spec=None,
-        connection_drawing_spec=mp.solutions.drawing_styles
-        .get_default_face_mesh_contours_style())
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=mp.solutions.face_mesh.FACEMESH_IRISES,
+        solutions.drawing_utils.draw_landmarks(
+            image=annotated_image,
+            landmark_list=face_landmarks_proto,
+            connections=mp.solutions.face_mesh.FACEMESH_TESSELATION,
             landmark_drawing_spec=None,
             connection_drawing_spec=mp.solutions.drawing_styles
-            .get_default_face_mesh_iris_connections_style())
+            .get_default_face_mesh_tesselation_style())
+        solutions.drawing_utils.draw_landmarks(
+            image=annotated_image,
+            landmark_list=face_landmarks_proto,
+            connections=mp.solutions.face_mesh.FACEMESH_CONTOURS,
+            landmark_drawing_spec=None,
+            connection_drawing_spec=mp.solutions.drawing_styles
+            .get_default_face_mesh_contours_style())
+        solutions.drawing_utils.draw_landmarks(
+            image=annotated_image,
+            landmark_list=face_landmarks_proto,
+            connections=mp.solutions.face_mesh.FACEMESH_IRISES,
+                landmark_drawing_spec=None,
+                connection_drawing_spec=mp.solutions.drawing_styles
+                .get_default_face_mesh_iris_connections_style())
 
     return annotated_image
 
@@ -51,8 +51,7 @@ options = vision.FaceLandmarkerOptions(
     base_options=BaseOptions(model_asset_path='face_landmark_model.task'),
     output_face_blendshapes=True,
     output_facial_transformation_matrixes=True,
-    num_faces=1,
-    running_mode=VisionRunningMode.IMAGE)
+    num_faces=1)
 model = vision.FaceLandmarker.create_from_options(options)
 
 cam = cv2.VideoCapture(0)
@@ -63,9 +62,9 @@ while True:
         res = model.detect(img)
         annotated_image = draw_landmarks_on_image(img.numpy_view(), res)
         cv2.imshow('frame', cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR))
-    time.sleep(0.1)
 
     if cv2.waitKey(1) == ord('q'):
         break
+    time.sleep(0.1)
 cam.release()
 cv2.destroyAllWindows()
