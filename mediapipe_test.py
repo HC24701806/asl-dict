@@ -4,25 +4,27 @@ mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_holistic = mp.solutions.holistic
 
-cam = cv2.VideoCapture(0)
-with mp_holistic.Holistic(
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5) as holistic:
-    while cam.isOpened():
-        success, image = cam.read()
-        if not success:
-            print("Ignoring empty camera frame.")
-            continue
+video = cv2.VideoCapture('./ASL_Citizen/videos/824925993024-NEAR.mp4')
+fps = video.get(cv2.CAP_PROP_FPS)
+i = 0
+with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
+    while video.isOpened():
+        if i >= 3 * fps:
+            break
 
+        ret, frame = video.read()
+        if not ret:
+            break
+        
         # To improve performance, optionally mark the image as not writeable to
         # pass by reference.
-        image.flags.writeable = False
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        frame.flags.writeable = False
+        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = holistic.process(image)
 
         # Draw landmark annotation on the image.
-        image.flags.writeable = True
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        frame.flags.writeable = True
+        image = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         mp_drawing.draw_landmarks(
             image,
             results.face_landmarks,
@@ -39,6 +41,8 @@ with mp_holistic.Holistic(
         
         # Flip the image horizontally for a selfie-view display.
         cv2.imshow('MediaPipe Holistic', cv2.flip(image, 1))
-        if cv2.waitKey(1) & 0xFF == 27:
+        i += int(fps * 0.25)
+        video.set(cv2.CAP_PROP_POS_FRAMES, i)
+        if cv2.waitKey(1) == ord('q'):
             break
-cam.release()
+video.release()
