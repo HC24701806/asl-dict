@@ -41,7 +41,8 @@ with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=
         
         # Flip the image horizontally for a selfie-view display.
         cv2.imshow('MediaPipe Holistic', cv2.flip(image, 1))
-        i += int(fps * 0.25)
+        # i += int(fps * 0.25)
+        i += 1
         video.set(cv2.CAP_PROP_POS_FRAMES, i)
         if cv2.waitKey(1) == ord('q'):
             break
