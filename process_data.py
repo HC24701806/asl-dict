@@ -20,11 +20,17 @@ for filename in os.listdir('./ASL_Citizen/splits'):
             video = cv2.VideoCapture(f'./ASL_Citizen/videos/{video_id}.mp4')
             fps = video.get(cv2.CAP_PROP_FPS)
             frame_num = 0
+            begin_frame_num = 0
+            in_clip = False
+            strikes = 0
 
             data = pd.DataFrame()
             row = 0
             with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
                 while video.isOpened():
+                    if frame_num - begin_frame_num > 3 * fps:
+                        break
+
                     ret, frame = video.read()
                     if not ret:
                         break
@@ -32,38 +38,83 @@ for filename in os.listdir('./ASL_Citizen/splits'):
                     frame.flags.writeable = False
                     img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     results = holistic.process(img)
-                    
-                    if results.face_landmarks:
-                        for i, point in enumerate(results.face_landmarks.landmark):
-                            data.loc[row, 'frame'] = frame_num
-                            data.loc[row, 'x'] = point.x
-                            data.loc[row, 'y'] = point.y
-                            data.loc[row, 'type'] = 'face'
-                            row += 1
 
-                    if results.pose_landmarks:
-                        for i, point in enumerate(results.pose_landmarks.landmark):
-                            data.loc[row, 'frame'] = frame_num
-                            data.loc[row, 'x'] = point.x
-                            data.loc[row, 'y'] = point.y
-                            data.loc[row, 'type'] = 'pose'
-                            row += 1
+                    if not results.left_hand_landmarks and not results.right_hand_landmarks and in_clip:
+                        strikes += 1
+                        if strikes == 2:
+                            break
+                    if (results.left_hand_landmarks or results.right_hand_landmarks) and not in_clip:
+                        begin_frame_num = frame_num
+                        in_clip = True
 
-                    if results.left_hand_landmarks:
-                        for i, point in enumerate(results.left_hand_landmarks.landmark):
-                            data.loc[row, 'frame'] = frame_num
-                            data.loc[row, 'x'] = point.x
-                            data.loc[row, 'y'] = point.y
-                            data.loc[row, 'type'] = 'left hand'
-                            row += 1
-                    
-                    if results.right_hand_landmarks:
-                        for i, point in enumerate(results.right_hand_landmarks.landmark):
-                            data.loc[row, 'frame'] = frame_num
-                            data.loc[row, 'x'] = point.x
-                            data.loc[row, 'y'] = point.y
-                            data.loc[row, 'type'] = 'right hand'
-                            row += 1
+                    if in_clip:
+                        id = 0
+                        data.loc[row, 'frame'] = frame_num
+                        if results.face_landmarks:
+                            for i in range(468):
+                                face_pt = results.face_landmarks.landmark[i]
+                                if face_pt:
+                                    data.loc[row, f'x{id}'] = face_pt.x
+                                    data.loc[row, f'y{id}'] = face_pt.y
+                                else:
+                                    data.loc[row, f'x{id}'] = 0
+                                    data.loc[row, f'y{id}'] = 0
+                                id += 1
+                        else:
+                            for i in range(468):
+                                data.loc[row, f'x{id}'] = 0
+                                data.loc[row, f'y{id}'] = 0
+                                id += 1
+
+                        if results.pose_landmarks:
+                            for i in range(33):
+                                pose_pt = results.pose_landmarks.landmark[i]
+                                if pose_pt:
+                                    data.loc[row, f'x{id}'] = pose_pt.x
+                                    data.loc[row, f'y{id}'] = pose_pt.y
+                                else:
+                                    data.loc[row, f'x{id}'] = 0
+                                    data.loc[row, f'y{id}'] = 0
+                                id += 1
+                        else:
+                            for i in range(33):
+                                data.loc[row, f'x{id}'] = 0
+                                data.loc[row, f'y{id}'] = 0
+                                id += 1
+
+                        if results.left_hand_landmarks:
+                            for i in range(21):
+                                lhand_pt = results.left_hand_landmarks.landmark[i]
+                                if lhand_pt:
+                                    data.loc[row, f'x{id}'] = lhand_pt.x
+                                    data.loc[row, f'y{id}'] = lhand_pt.y
+                                else:
+                                    data.loc[row, f'x{id}'] = 0
+                                    data.loc[row, f'y{id}'] = 0
+                                id += 1
+                        else:
+                            for i in range(21):
+                                data.loc[row, f'x{id}'] = 0
+                                data.loc[row, f'y{id}'] = 0
+                                id += 1
+
+                        if results.right_hand_landmarks:
+                            for i in range(21):
+                                rhand_pt = results.right_hand_landmarks.landmark[i]
+                                if rhand_pt:
+                                    data.loc[row, f'x{id}'] = rhand_pt.x
+                                    data.loc[row, f'y{id}'] = rhand_pt.y
+                                else:
+                                    data.loc[row, f'x{id}'] = 0
+                                    data.loc[row, f'y{id}'] = 0
+                                id += 1
+                        else:
+                            for i in range(21):
+                                data.loc[row, f'x{id}'] = 0
+                                data.loc[row, f'y{id}'] = 0
+                                id += 1
+                        
+                        row += 1
                     
                     frame_num += int(fps * 0.25)
                     video.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
