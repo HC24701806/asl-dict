@@ -6,6 +6,10 @@ import pandas as pd
 
 mp_holistic = mp.solutions.holistic
 
+features_face = [70, 105, 107, 33, 160, 158, 133, 153, 144,
+                 336, 334, 300, 362, 385, 387, 263, 373, 380,
+                 78, 73, 11, 303, 308, 320, 315, 85, 90]
+
 for filename in os.listdir('./ASL_Citizen/splits'):
     split = filename.split('.')[0]
     with open(f'./ASL_Citizen/splits/{filename}') as csv_file:
@@ -26,7 +30,7 @@ for filename in os.listdir('./ASL_Citizen/splits'):
 
             data = pd.DataFrame()
             row = 0
-            with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
+            with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5, refine_face_landmarks=True) as holistic:
                 while video.isOpened():
                     if frame_num - begin_frame_num > 3 * fps:
                         break
@@ -51,7 +55,7 @@ for filename in os.listdir('./ASL_Citizen/splits'):
                         id = 0
                         data.loc[row, 'frame'] = frame_num
                         if results.face_landmarks:
-                            for i in range(468):
+                            for i in features_face:
                                 face_pt = results.face_landmarks.landmark[i]
                                 if face_pt:
                                     data.loc[row, f'x{id}'] = face_pt.x
@@ -62,22 +66,6 @@ for filename in os.listdir('./ASL_Citizen/splits'):
                                 id += 1
                         else:
                             for i in range(468):
-                                data.loc[row, f'x{id}'] = 0
-                                data.loc[row, f'y{id}'] = 0
-                                id += 1
-
-                        if results.pose_landmarks:
-                            for i in range(33):
-                                pose_pt = results.pose_landmarks.landmark[i]
-                                if pose_pt:
-                                    data.loc[row, f'x{id}'] = pose_pt.x
-                                    data.loc[row, f'y{id}'] = pose_pt.y
-                                else:
-                                    data.loc[row, f'x{id}'] = 0
-                                    data.loc[row, f'y{id}'] = 0
-                                id += 1
-                        else:
-                            for i in range(33):
                                 data.loc[row, f'x{id}'] = 0
                                 data.loc[row, f'y{id}'] = 0
                                 id += 1
