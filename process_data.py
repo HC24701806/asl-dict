@@ -11,7 +11,6 @@ features_face = [70, 105, 107, 33, 160, 158, 133, 153, 144,
                  78, 73, 11, 303, 308, 320, 315, 85, 90]
 
 for filename in os.listdir('./ASL_Citizen/splits'):
-    split = filename.split('.')[0]
     with open(f'./ASL_Citizen/splits/{filename}') as csv_file:
         reader = csv.reader(csv_file)
         next(reader)
