@@ -2,3 +2,4 @@ ASL_Citizen/
 mini_demo/mini_dataset/
 dataset/
 ASL_Citizen.zip
+*.pth

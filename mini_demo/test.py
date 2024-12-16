@@ -63,11 +63,8 @@ with open('random_sample.csv', 'r') as csvfile:
 
         file_labels[file] = labels_dict[gloss]
 
-train_data = Data(splits['train'], file_labels)
-train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
-
-val_data = Data(splits['val'], file_labels)
-val_loader = DataLoader(val_data, batch_size=16, shuffle=True)
+test_data = Data(splits['train'], file_labels)
+test_loader = DataLoader(test_data, batch_size=16, shuffle=True)
 
 input_dim = 13 * 136
 hidden_layers = 25
@@ -84,26 +81,19 @@ class Network(nn.Module):
         return x
     
 model = Network()
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+model.load_state_dict(torch.load('model_v1.pth'))
+dataiter = iter(test_loader)
 
-for epoch in range(50):
-    running_loss = 0.0
-    for i, (inputs, labels) in enumerate(train_loader):
-        # Move data to the appropriate device (e.g., GPU if available)
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        inputs, labels = inputs.to(device), labels.to(device)
-        # set optimizer to zero grad to remove previous epoch gradients
-        optimizer.zero_grad()
-        # forward propagation
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        # backward propagation
-        loss.backward()
-        # optimize
-        optimizer.step()
-        running_loss += loss.item()
-    # display statistics
-    print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss/2000:.5f}')
-
-torch.save(model.state_dict(), 'model_v1.pth')
+correct, total = 0, 0
+# no need to calculate gradients during inference
+with torch.no_grad():
+  for data in test_loader:
+    inputs, labels = data
+    # calculate output by running through the network
+    outputs = model(inputs)
+    # get the predictions
+    __, predicted = torch.max(outputs.data, 1)
+    # update results
+    total += labels.size(0)
+    correct += (predicted == labels).sum().item()
+print(f'Accuracy of the network on the {len(test_data)} test data: {100 * correct // total} %')
