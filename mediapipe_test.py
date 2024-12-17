@@ -2,7 +2,7 @@ import cv2
 import mediapipe as mp
 
 mp_holistic = mp.solutions.holistic
-video = cv2.VideoCapture('./ASL_Citizen/videos/5838960420412-TOW 2.mp4')
+video = cv2.VideoCapture('./ASL_Citizen/videos/4499250795706189-CIRCUSWHEEL.mp4')
 fps = video.get(cv2.CAP_PROP_FPS)
 frame_num = 0
 begin_frame_num = 0
@@ -51,9 +51,15 @@ with mp_holistic.Holistic(min_detection_confidence=0.25, min_tracking_confidence
             if strikes >= 12:
                 end_frame_num = frame_num
                 break
-
+        
+        print(frame_num, num_landmarks)
         frame_num += 1
+        cv2.imshow('video', frame)
+        if cv2.waitKey(1) == ord('q'):
+            break
 
+if end_frame_num == 0:
+    end_frame_num = frame_num
 curr_frame = begin_frame_num
 while video.isOpened():
     if curr_frame > end_frame_num:

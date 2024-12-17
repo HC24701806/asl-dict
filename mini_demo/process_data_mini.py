@@ -65,6 +65,8 @@ with open('random_sample.csv') as csvfile:
                 frame_num += 1
         video.release()
         
+        if end_frame_num == 0:
+            end_frame_num = frame_num
         start = begin_frame_num/fps
         end = end_frame_num/fps
         {
