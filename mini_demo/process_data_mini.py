@@ -98,4 +98,4 @@ with open(f'random_sample.csv') as csv_file:
                 if cv2.waitKey(1) == ord('q'):
                     break
         video.release()
-        data.to_csv(f'./mini_dataset/{video_id}.csv')
+        data.to_csv(f'./mini_raw_dataset/{video_id}.csv')

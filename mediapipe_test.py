@@ -10,7 +10,7 @@ features_face = [70, 105, 107, 33, 160, 158, 133, 153, 144,
                  336, 334, 300, 362, 385, 387, 263, 373, 380,
                  78, 73, 11, 303, 308, 320, 315, 85, 90]
 
-video = cv2.VideoCapture('./ASL_Citizen/videos/5868753228914183-IMPOSSIBLE.mp4')
+video = cv2.VideoCapture('./ASL_Citizen/videos/7331183744373-THINK CONNECT.mp4')
 fps = video.get(cv2.CAP_PROP_FPS)
 frame_num = 0
 begin_frame_num = 0
@@ -83,10 +83,21 @@ with mp_holistic.Holistic(min_detection_confidence=0.25, min_tracking_confidence
                 break        
 
         if in_clip:
+            noise = np.random.normal(0, 0.005, 138)
+            noisy_data = np.zeros(138, dtype='float32')
+            for i in range(138):
+                if data_arr[i] != 0:
+                    noisy_data[i] = data_arr[i] + noise[i]
+                    if i % 2 == 0:
+                        noisy_data[i] += 0.2
+            
             for i in range(69):
                 x = int(640 * data_arr[2 * i])
                 y = int(480 * data_arr[2 * i + 1])
+                noisy_x = int(640 * noisy_data[2 * i])
+                noisy_y = int(480 * noisy_data[2 * i + 1])
                 image = cv2.circle(image, (x, y), 3, (0, 0, 255), -1)
+                image = cv2.circle(image, (noisy_x, noisy_y), 3, (0, 255, 0), -1)
         
         # Flip the image horizontally for a selfie-view display.
         cv2.imshow('MediaPipe Holistic', cv2.flip(image, 1))

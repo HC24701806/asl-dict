@@ -1,5 +1,7 @@
 ASL_Citizen/
 mini_demo/mini_dataset/
+mini_demo/mini_raw_dataset/
 dataset/
 ASL_Citizen.zip
+*.csv
 *.pth

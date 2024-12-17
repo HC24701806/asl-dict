@@ -81,7 +81,7 @@ class Network(nn.Module):
         return x
     
 model = Network()
-model.load_state_dict(torch.load('model_v1.pth'))
+model.load_state_dict(torch.load('model_v2.pth'))
 dataiter = iter(test_loader)
 
 correct, total = 0, 0
