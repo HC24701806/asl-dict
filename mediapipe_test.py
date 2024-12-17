@@ -1,9 +1,7 @@
 import cv2
 import mediapipe as mp
-mp_drawing = mp.solutions.drawing_utils
-mp_drawing_styles = mp.solutions.drawing_styles
-mp_holistic = mp.solutions.holistic
 
+mp_holistic = mp.solutions.holistic
 video = cv2.VideoCapture('./ASL_Citizen/videos/5838960420412-TOW 2.mp4')
 fps = video.get(cv2.CAP_PROP_FPS)
 frame_num = 0
