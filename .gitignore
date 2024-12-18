@@ -4,6 +4,7 @@ mini_demo/mini_augmented_dataset/
 dataset/
 __pycache__/
 ASL_Citizen.zip
+util_test.py
 *.csv
 *.pth
 *.txt
