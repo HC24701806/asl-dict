@@ -5,16 +5,6 @@ import torch.nn as nn
 import numpy as np
 import csv
 from pytorchvideo.data.encoded_video import EncodedVideo
-from torchvision.transforms import Compose, Lambda
-from torchvision.transforms._transforms_video import (
-    CenterCropVideo,
-    NormalizeVideo,
-)
-from pytorchvideo.transforms import (
-    ApplyTransformToKey,
-    ShortSideScale,
-    UniformTemporalSubsample
-)
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -37,20 +27,6 @@ class ClassificationDataset(torch.utils.data.Dataset):
         self.ids = ids
         self.label_list = label_list
 
-        mean = [0.45, 0.45, 0.45]
-        std = [0.225, 0.225, 0.225]
-        self.transform = ApplyTransformToKey(
-            key='video',
-            transform=Compose(
-                [
-                    UniformTemporalSubsample(8),
-                    Lambda(lambda x: x/255.0),
-                    NormalizeVideo(mean, std),
-                    ShortSideScale(size=256),
-                ]
-            ),
-        )
-
     def __len__(self):
         return len(self.ids)
 
@@ -58,8 +34,7 @@ class ClassificationDataset(torch.utils.data.Dataset):
         id = self.ids[index]
         video = EncodedVideo.from_path(f'./mini_augmented_dataset/{id}.mp4')
         label = self.labels_list[id]
-        data = video.get_clip(start_sec=0, end_sec=video.duration)
-        inputs = self.transform(data)['video']
+        inputs = video.get_clip(start_sec=0, end_sec=video.duration)
         return inputs, label
     
 post_act = torch.nn.Softmax(dim=1)
