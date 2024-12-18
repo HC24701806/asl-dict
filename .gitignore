@@ -2,6 +2,7 @@ ASL_Citizen/
 mini_demo/mini_dataset/
 mini_demo/mini_augmented_dataset/
 dataset/
+__pycache__/
 ASL_Citizen.zip
 *.csv
 *.pth
