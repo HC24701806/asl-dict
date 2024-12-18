@@ -6,5 +6,4 @@ ASL_Citizen.zip
 *.csv
 *.pth
 *.txt
-.DS_Store
-mini_demo/.DS_Store
+*.mp4
