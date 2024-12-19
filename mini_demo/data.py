@@ -5,9 +5,9 @@ from concurrent.futures import ThreadPoolExecutor
 import torch
 
 # get specific frame
-def get_frame(input, frame):
+def get_frame(input, frame_num):
     video = cv2.VideoCapture(f'./mini_dataset/{input}.mp4')
-    video.set(cv2.CAP_PROP_POS_FRAMES, frame)
+    video.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
     ret, frame = video.read()
     if not ret:
         return None
@@ -16,13 +16,13 @@ def get_frame(input, frame):
 # transform video data to tensor
 def get_video_data(input):
     video = cv2.VideoCapture(f'./mini_dataset/{input}.mp4')
-    frame_list = np.int32(np.multiply(np.random.normal(0.4, 0.1667, 8), video.get(cv2.CAP_PROP_FRAME_COUNT)))
+    frame_list = np.int32(np.multiply(np.random.normal(0.45, 0.25, 8), video.get(cv2.CAP_PROP_FRAME_COUNT)))
     video.release()
     frames = []
     with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-        frames = executor.map(lambda frame: get_frame(input, frame), frame_list)
+        frames = executor.map(lambda frame_num: get_frame(input, frame_num), frame_list)
 
-    res = np.empty((12, 240, 320, 3), dtype='float32')
+    res = np.empty((8, 240, 320, 3), dtype='float32')
     for i, f in enumerate(frames):
         res[i] = f
     res = np.transpose(res, [3, 0, 1, 2])
