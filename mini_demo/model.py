@@ -1,9 +1,14 @@
 # code based on https://medium.com/@enrico.randellini/hands-on-video-classification-with-pytorchvideo-dc9cfcc1eb5f
 
-import torch
-import torch.nn as nn
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
 import numpy as np
 import csv
+import cv2
+
+import torch
+import torch.nn as nn
 from pytorchvideo.data.encoded_video import EncodedVideo
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -21,6 +26,22 @@ class Model(nn.Module):
         x = self.base_model(x)
         return x
     
+def get_video_data(input):
+    video = cv2.VideoCapture('../butterfly.mp4')
+    frame_list = sorted(np.int32(np.multiply(np.random.normal(0.4, 0.1667, 12), cv2.CAP_PROP_FRAME_COUNT)))
+    res = np.zeros((12, 480, 640, 3), dtype='float32')
+    i = 0
+    for frame in frame_list:
+        video.set(cv2.CAP_PROP_POS_FRAMES, frame)
+        ret, frame = video.read()
+        if not ret:
+            break
+        res[i] = np.float32(np.array(cv2.resize(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), (640, 480))))
+        i += 1
+    video.release()
+    res = np.transpose(res, [3, 0, 1, 2])
+    return torch.from_numpy(res).shape
+
 class ClassificationDataset(torch.utils.data.Dataset):
     def __init__(self, ids, label_list) -> None:
         super().__init__()
@@ -32,9 +53,7 @@ class ClassificationDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         id = self.ids[index]
-        video = EncodedVideo.from_path(f'./mini_augmented_dataset/{id}.mp4')
-        label = self.labels_list[id]
-        inputs = video.get_clip(start_sec=0, end_sec=video.duration)
+        inputs = get_video_data(id)
         return inputs, label
     
 post_act = torch.nn.Softmax(dim=1)
@@ -73,7 +92,7 @@ with open('sample_classes.txt') as labels_file:
         i += 1
 
 splits = {}
-labels_list = {}
+label_list = {}
 splits['train'] = []
 splits['val'] = []
 splits['test'] = []
@@ -87,11 +106,11 @@ with open('augmented_sample.csv') as data:
         label = line[2]
 
         splits[split].append(id)
-        labels_list[id] = labels[line[2]]
+        label_list[id] = labels[line[2]]
 
-train_dataset = ClassificationDataset(ids=splits['train'], label_list=labels)
-val_dataset = ClassificationDataset(ids=splits['val'], label_list=labels)
-test_dataset = ClassificationDataset(ids=splits['test'], label_list=labels)
+train_dataset = ClassificationDataset(ids=splits['train'], label_list=label_list)
+val_dataset = ClassificationDataset(ids=splits['val'], label_list=label_list)
+test_dataset = ClassificationDataset(ids=splits['test'], label_list=label_list)
 
 train_dataloader = DataLoader(dataset=train_dataset, batch_size=16, shuffle=True)
 val_dataloader = DataLoader(dataset=val_dataset, batch_size=16, shuffle=True)
