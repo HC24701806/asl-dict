@@ -1,21 +1,30 @@
 import numpy as np
 import cv2
+import os
+from concurrent.futures import ThreadPoolExecutor
 import torch
+
+# get specific frame
+def get_frame(input, frame):
+    video = cv2.VideoCapture(f'./mini_dataset/{input}.mp4')
+    video.set(cv2.CAP_PROP_POS_FRAMES, frame)
+    ret, frame = video.read()
+    if not ret:
+        return None
+    return np.asarray(frame, dtype='float32')
 
 # transform video data to tensor
 def get_video_data(input):
     video = cv2.VideoCapture(f'./mini_dataset/{input}.mp4')
-    frame_list = sorted(np.int32(np.multiply(np.random.normal(0.4, 0.1667, 12), cv2.CAP_PROP_FRAME_COUNT)))
-    res = np.zeros((12, 240, 320, 3), dtype='float32')
-    i = 0
-    for frame in frame_list:
-        video.set(cv2.CAP_PROP_POS_FRAMES, frame)
-        ret, frame = video.read()
-        if not ret:
-            break
-        res[i] = np.float32(np.array(cv2.resize(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), (320, 240))))
-        i += 1
+    frame_list = np.int32(np.multiply(np.random.normal(0.4, 0.1667, 8), video.get(cv2.CAP_PROP_FRAME_COUNT)))
     video.release()
+    frames = []
+    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+        frames = executor.map(lambda frame: get_frame(input, frame), frame_list)
+
+    res = np.empty((12, 240, 320, 3), dtype='float32')
+    for i, f in enumerate(frames):
+        res[i] = f
     res = np.transpose(res, [3, 0, 1, 2])
     return torch.from_numpy(res)
 

@@ -4,7 +4,7 @@ sys.path.insert(1, '/Users/haolincong/Documents/GitHub/asl-dict/')
 from util import shift
 
 def augment_file(id):
-    input_path = f'./mini_dataset/{id}_1.mp4'
+    input_path = f'./mini_dataset/{id}.mp4'
     for x_shift in range(-150, 151, 150):
         for y_shift in range(-75, 76, 75):
             output_path = f'./mini_augmented_dataset/{id}_{x_shift}_{y_shift}.mp4'
