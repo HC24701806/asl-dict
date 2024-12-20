@@ -21,10 +21,15 @@ class Model(nn.Module):
     def __init__(self):
         super().__init__()
         self.base_model = torch.hub.load('facebookresearch/pytorchvideo', 'slow_r50', pretrained=True)
-        self.base_model.blocks[5].proj = nn.Sequential(nn.Linear(2048, 128),
-                                                        nn.ReLU(),
-                                                        nn.Dropout(0.3),
-                                                        nn.Linear(128, 50))
+        self.base_model.blocks[5].proj = nn.Sequential(
+                                            nn.Linear(2048, 128),
+                                            nn.ReLU(),
+                                            nn.Dropout(0.3),
+                                            nn.Linear(128, 50))
+        
+        for name, param in self.base_model.named_parameters():
+            if int(name.split('.')[1]) < 5:
+                param.requires_grad = False
 
     def forward(self, x):
         x = self.base_model(x)
@@ -58,7 +63,7 @@ def val_loss(inputs, labels, model, criterion):
     return val_loss.item()
 
 #load data
-label_dict = {}
+label_dict = {} # gloss to label (numerical)
 with open('sample_classes.txt') as labels_file:
     content = labels_file.readlines()
     i = 0
@@ -66,10 +71,10 @@ with open('sample_classes.txt') as labels_file:
         label_dict[line[:-1]] = i
         i += 1
 
-splits = {}
-label_list = np.empty(1513, dtype=int)
-id_to_filename = []
-video_info = np.empty((1513, 2), dtype=int)
+splits = {} # each list: video ids in that split
+label_list = np.empty(0, dtype=int) # id to label
+id_to_filename = [] # id to filename
+video_info = np.empty((1513, 2), dtype=int) # id to begin/end frames
 splits['train'] = np.empty(0, dtype=int)
 splits['val'] = np.empty(0, dtype=int)
 splits['test'] = np.empty(0, dtype=int)
@@ -86,7 +91,7 @@ with open('mini_dataset.csv') as data:
         label = line[4]
 
         splits[split] = np.append(splits[split], id)
-        label_list[id] = label_dict[label]
+        label_list = np.append(label_list, label_dict[label])
         id_to_filename.append(file_name)
         video_info[id] = [start_frame, end_frame]
         id += 1
@@ -104,11 +109,16 @@ device = torch.device('mps')
 
 model = Model().to('mps')
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
 exp_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
 
 # train
 for epoch in range(25):
+    if epoch == 5:
+        for name, param in model.named_parameters():
+            if int(name.split('.')[2]) >= 3:
+                param.requires_grad = True
+
     # iterate on all train batches of the current epoch by executing the train_batch function
     train_epoch_losses = []
     for inputs, labels in tqdm(train_dataloader, desc=f'epoch {str(epoch + 1)} | train'):

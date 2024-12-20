@@ -6,13 +6,8 @@ import torch
 
 # process frame (replacement for transforms)
 def process(frame):
-    h, w, __ = frame.shape
-    new_w = int(w * 256/h)
-    frame = cv2.resize(frame, (new_w, 256))
-    left = new_w // 2 - 128
-    right = left + 256
-    frame = np.asarray(frame[0:256, left:right], dtype='float32')
-    return np.divide(np.subtract(np.divide(frame, 255.0), 0.45), 0.225)
+    frame = np.divide(np.subtract(np.divide(frame, 255.0), 0.45), 0.225)
+    return cv2.resize(frame, (256, 256))
 
 # get specific frame
 def get_frame(input, frame_num):
