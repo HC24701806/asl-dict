@@ -58,21 +58,22 @@ def val_loss(inputs, labels, model, criterion):
     return val_loss.item()
 
 #load data
-labels = {}
+label_dict = {}
 with open('sample_classes.txt') as labels_file:
     content = labels_file.readlines()
     i = 0
     for line in content:
-        labels[line[:-1]] = i
+        label_dict[line[:-1]] = i
         i += 1
 
 splits = {}
-label_list = np.empty(0, dtype=int)
-id_dict = {}
+label_list = np.empty(1513, dtype=int)
+id_to_filename = []
+video_info = np.empty((1513, 2), dtype=int)
 splits['train'] = np.empty(0, dtype=int)
 splits['val'] = np.empty(0, dtype=int)
 splits['test'] = np.empty(0, dtype=int)
-with open('random_sample.csv') as data:
+with open('mini_dataset.csv') as data:
     reader = csv.reader(data)
     next(reader)
 
@@ -80,21 +81,24 @@ with open('random_sample.csv') as data:
     for line in reader:
         split = line[0]
         file_name = line[1]
-        label = line[2]
+        start_frame = int(line[2])
+        end_frame = int(line[3])
+        label = line[4]
 
         splits[split] = np.append(splits[split], id)
-        label_list = np.append(label_list, labels[label])
-        id_dict[id] = file_name
+        label_list[id] = label_dict[label]
+        id_to_filename.append(file_name)
+        video_info[id] = [start_frame, end_frame]
         id += 1
 
 #prepare for training
-train_dataset = ClassificationDataset(id_list=splits['train'], label_list=label_list, id_dict=id_dict)
-val_dataset = ClassificationDataset(id_list=splits['val'], label_list=label_list, id_dict=id_dict)
-test_dataset = ClassificationDataset(id_list=splits['test'], label_list=label_list, id_dict=id_dict)
+train_dataset = ClassificationDataset(id_list=splits['train'], label_list=label_list, id_to_filename=id_to_filename, video_info=video_info)
+val_dataset = ClassificationDataset(id_list=splits['val'], label_list=label_list, id_to_filename=id_to_filename, video_info=video_info)
+test_dataset = ClassificationDataset(id_list=splits['test'], label_list=label_list, id_to_filename=id_to_filename, video_info=video_info)
 
-train_dataloader = DataLoader(dataset=train_dataset, batch_size=16, shuffle=True)
-val_dataloader = DataLoader(dataset=val_dataset, batch_size=16, shuffle=True)
-test_dataloader = DataLoader(dataset=test_dataset, batch_size=16, shuffle=True)
+train_dataloader = DataLoader(dataset=train_dataset, batch_size=8, shuffle=True)
+val_dataloader = DataLoader(dataset=val_dataset, batch_size=8, shuffle=True)
+test_dataloader = DataLoader(dataset=test_dataset, batch_size=8, shuffle=True)
 
 device = torch.device('mps')
 
@@ -103,12 +107,10 @@ criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 exp_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
 
-train_epoch_losses, train_epoch_accuracies = [], []
-val_epoch_losses, val_epoch_accuracies = [], []
-
 # train
 for epoch in range(10):
     # iterate on all train batches of the current epoch by executing the train_batch function
+    train_epoch_losses = []
     for inputs, labels in tqdm(train_dataloader, desc=f'epoch {str(epoch + 1)} | train'):
         inputs = inputs.to(device)
         labels = labels.to(device)
@@ -117,14 +119,17 @@ for epoch in range(10):
     train_epoch_loss = np.array(train_epoch_losses).mean()
 
     # iterate on all train batches of the current epoch by calculating their accuracy
+    train_epoch_accuracies = []
     for inputs, labels in tqdm(train_dataloader, desc=f'epoch {str(epoch + 1)} | train_acc'):
         inputs = inputs.to(device)
         labels = labels.to(device)
         is_correct = accuracy(inputs, labels, model)
         train_epoch_accuracies.extend(is_correct)
-    train_epoch_accuracy = np.mean(train_epoch_accuracies)
+    train_epoch_accuracy = np.array(train_epoch_accuracies).mean()
 
     # iterate on all batches of val of the current epoch by calculating the accuracy and the loss function
+    val_epoch_accuracies = []
+    val_epoch_losses = []
     for inputs, labels in tqdm(val_dataloader, desc=f'epoch {str(epoch + 1)} | val'):
         inputs = inputs.to(device)
         labels = labels.to(device)
@@ -132,8 +137,8 @@ for epoch in range(10):
         val_epoch_accuracies.extend(val_is_correct)
         validation_loss = val_loss(inputs, labels, model, criterion)
         val_epoch_losses.append(validation_loss)
-    val_epoch_accuracy = np.mean(val_epoch_accuracies)
-    val_epoch_loss = np.mean(val_epoch_losses)
+    val_epoch_accuracy = np.array(val_epoch_accuracies).mean()
+    val_epoch_loss = np.array(val_epoch_losses).mean()
 
     print(train_epoch_loss, train_epoch_accuracy)
     print(val_epoch_loss, val_epoch_accuracy)
@@ -154,6 +159,7 @@ actual = []
 predicted = []
 total = 0
 model = model.eval()
+print('Testing')
 with torch.no_grad():
     # cycle on all train batches of the current epoch by calculating their accuracy
     for inputs, labels in test_dataloader:
@@ -182,13 +188,13 @@ with torch.no_grad():
     fig, ax = plt.subplots(figsize=(50, 30))
     sns.heatmap(cm, annot=True, fmt='d', ax=ax, cmap=plt.cm.Blues,
                 cbar=False)
-    ax.set(xlabel="Pred", ylabel="True", xticklabels=labels.keys(),
-            yticklabels=labels.keys(), title="Confusion matrix")
+    ax.set(xlabel="Pred", ylabel="True", xticklabels=label_dict.keys(),
+            yticklabels=label_dict.keys(), title="Confusion matrix")
     plt.yticks(rotation=0)
     fig.savefig('./models/confusion_matrix.png')
 
     ## Save report in a txt
-    target_names = list(labels.keys())
+    target_names = list(label_dict.keys())
     cr = metrics.classification_report(actual, predicted, target_names=target_names)
     with open('./models/report.txt', 'w') as report:
         report.write('Title\n\nClassification Report\n\n{}'.format(cr))

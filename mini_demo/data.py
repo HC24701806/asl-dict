@@ -4,42 +4,51 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 import torch
 
+# process frame (replacement for transforms)
+def process(frame):
+    h, w, __ = frame.shape
+    new_w = int(w * 256/h)
+    frame = cv2.resize(frame, (new_w, 256))
+    left = new_w // 2 - 128
+    right = left + 256
+    frame = np.asarray(frame[0:256, left:right], dtype='float32')
+    return np.divide(np.subtract(np.divide(frame, 255.0), 0.45), 0.225)
+
 # get specific frame
 def get_frame(input, frame_num):
-    video = cv2.VideoCapture(f'./mini_dataset/{input}.mp4')
+    video = cv2.VideoCapture(f'../ASL_Citizen/videos/{input}.mp4')
     video.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
     ret, frame = video.read()
     if not ret:
         return None
-    return np.asarray(frame, dtype='float32')
+    return process(frame)
 
 # transform video data to tensor
-def get_video_data(input):
-    video = cv2.VideoCapture(f'./mini_dataset/{input}.mp4')
-    frame_list = np.int32(np.multiply(np.random.normal(0.45, 0.25, 8), video.get(cv2.CAP_PROP_FRAME_COUNT)))
-    video.release()
+def get_video_data(input, begin_frame, end_frame):
+    frame_list = np.linspace(begin_frame, end_frame, 16).round().astype(int)
     frames = []
     with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
         frames = executor.map(lambda frame_num: get_frame(input, frame_num), frame_list)
 
-    res = np.empty((8, 240, 320, 3), dtype='float32')
+    res = np.empty((16, 256, 256, 3), dtype='float32')
     for i, f in enumerate(frames):
         res[i] = f
     res = np.transpose(res, [3, 0, 1, 2])
     return torch.from_numpy(res)
 
 class ClassificationDataset(torch.utils.data.Dataset):
-    def __init__(self, id_list, label_list, id_dict) -> None:
+    def __init__(self, id_list, label_list, id_to_filename, video_info) -> None:
         super().__init__()
         self.id_list = id_list
-        self.id_dict = id_dict
         self.label_list = label_list
+        self.id_to_filename = id_to_filename
+        self.video_info = video_info
 
     def __len__(self):
         return len(self.id_list)
 
     def __getitem__(self, index):
         id = self.id_list[index]
-        inputs = get_video_data(self.id_dict[id])
+        inputs = get_video_data(self.id_to_filename[id], self.video_info[id][0], self.video_info[id][1])
         label = self.label_list[id]
         return inputs, label

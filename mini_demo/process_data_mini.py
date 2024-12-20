@@ -1,12 +1,13 @@
 import cv2
 import csv
-import ffmpeg
 import mediapipe as mp
 mp_holistic = mp.solutions.holistic
 
-with open('random_sample.csv') as csvfile:
+with open('random_sample.csv') as csvfile, open('mini_dataset.csv', 'w') as dataset_csv:
     reader = csv.reader(csvfile)
+    writer = csv.writer(dataset_csv)
     next(reader)
+    writer.writerow(['split', 'file', 'start_frame', 'end_frame', 'gloss'])
 
     for line in reader:
         filename = line[1]
@@ -62,11 +63,4 @@ with open('random_sample.csv') as csvfile:
         
         if end_frame_num == 0:
             end_frame_num = frame_num
-        start = begin_frame_num/fps
-        end = end_frame_num/fps
-        {
-            ffmpeg.input(f'../ASL_Citizen/videos/{filename}.mp4', ss=start, to=end)
-            .filter('scale', 320, 240)
-            .output(f'./mini_dataset/{filename}.mp4')
-            .run()
-        }
+        writer.writerow([line[0], filename, str(begin_frame_num), str(end_frame_num), line[2]])
