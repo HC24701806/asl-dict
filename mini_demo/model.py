@@ -108,7 +108,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 exp_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
 
 # train
-for epoch in range(10):
+for epoch in range(25):
     # iterate on all train batches of the current epoch by executing the train_batch function
     train_epoch_losses = []
     for inputs, labels in tqdm(train_dataloader, desc=f'epoch {str(epoch + 1)} | train'):
