@@ -1,4 +1,4 @@
-# code based on https://medium.com/@enrico.randellini/hands-on-video-classification-with-pytorchvideo-dc9cfcc1eb5f
+# based on https://medium.com/@enrico.randellini/hands-on-video-classification-with-pytorchvideo-dc9cfcc1eb5f
 # remember to set "export PYTORCH_ENABLE_MPS_FALLBACK=1" before running
 
 import numpy as np
@@ -101,9 +101,9 @@ train_dataset = ClassificationDataset(id_list=splits['train'], label_list=label_
 val_dataset = ClassificationDataset(id_list=splits['val'], label_list=label_list, id_to_filename=id_to_filename, video_info=video_info)
 test_dataset = ClassificationDataset(id_list=splits['test'], label_list=label_list, id_to_filename=id_to_filename, video_info=video_info)
 
-train_dataloader = DataLoader(dataset=train_dataset, batch_size=8, shuffle=True)
-val_dataloader = DataLoader(dataset=val_dataset, batch_size=8, shuffle=True)
-test_dataloader = DataLoader(dataset=test_dataset, batch_size=8, shuffle=True)
+train_dataloader = DataLoader(dataset=train_dataset, batch_size=8, shuffle=True, drop_last=False)
+val_dataloader = DataLoader(dataset=val_dataset, batch_size=8, shuffle=True, drop_last=False)
+test_dataloader = DataLoader(dataset=test_dataset, batch_size=8, shuffle=True, drop_last=False)
 
 device = torch.device('mps')
 

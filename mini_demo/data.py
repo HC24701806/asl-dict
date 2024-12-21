@@ -1,35 +1,38 @@
 import numpy as np
 import cv2
 import os
+from torchvision import transforms
 from concurrent.futures import ThreadPoolExecutor
 import torch
 
-# process frame (replacement for transforms)
-def process(frame):
-    frame = np.divide(np.subtract(np.divide(frame, 255.0), 0.45), 0.225)
-    return cv2.resize(frame, (256, 256))
+process = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.45, 0.45, 0.45], std=[0.225, 0.225, 0.225]),
+    transforms.Resize((256, 256))
+])
 
 # get specific frame
 def get_frame(input, frame_num):
     video = cv2.VideoCapture(f'../ASL_Citizen/videos/{input}.mp4')
     video.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
     ret, frame = video.read()
-    if not ret:
-        return None
-    return process(frame)
+    if ret:
+        return process(frame)
+    print(ret, frame, input, frame_num)
+    return None
 
 # transform video data to tensor
 def get_video_data(input, begin_frame, end_frame):
-    frame_list = np.linspace(begin_frame, end_frame, 16).round().astype(int)
+    frame_list = np.linspace(begin_frame, end_frame - 1, 16).round().astype(int)
     frames = []
     with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
         frames = executor.map(lambda frame_num: get_frame(input, frame_num), frame_list)
 
-    res = np.empty((16, 256, 256, 3), dtype='float32')
+    res = torch.empty(16, 3, 256, 256)
     for i, f in enumerate(frames):
         res[i] = f
-    res = np.transpose(res, [3, 0, 1, 2])
-    return torch.from_numpy(res)
+    res = res.permute(1, 0, 2, 3)
+    return res
 
 class ClassificationDataset(torch.utils.data.Dataset):
     def __init__(self, id_list, label_list, id_to_filename, video_info) -> None:
