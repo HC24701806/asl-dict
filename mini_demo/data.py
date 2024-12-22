@@ -1,19 +1,20 @@
 import numpy as np
 import cv2
 import os
-from torchvision import transforms
+from torchvision.transforms import v2
 from concurrent.futures import ThreadPoolExecutor
 import torch
 
-process = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.45, 0.45, 0.45], std=[0.225, 0.225, 0.225]),
-    transforms.Resize((256, 256))
+process = v2.Compose([
+    v2.ToTensor(),
+    v2.Normalize(mean=[0.45, 0.45, 0.45], std=[0.225, 0.225, 0.225]),
+    v2.Resize((256, 256)),
+    v2.CenterCrop(256)
 ])
 
 # get specific frame
 def get_frame(input, frame_num):
-    video = cv2.VideoCapture(f'../ASL_Citizen/videos/{input}.mp4')
+    video = cv2.VideoCapture(f'../augmented_dataset/{input}.mp4')
     video.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
     ret, frame = video.read()
     video.release()

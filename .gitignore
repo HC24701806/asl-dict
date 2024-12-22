@@ -1,7 +1,5 @@
 ASL_Citizen/
-mini_demo/mini_dataset/
-mini_demo/mini_augmented_dataset/
-dataset/
+augmented_dataset/
 __pycache__/
 ASL_Citizen.zip
 *_test.py

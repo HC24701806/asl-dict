@@ -52,7 +52,7 @@ def accuracy(inputs, labels, model):
     return is_correct.cpu().numpy().tolist()
 
 @torch.no_grad()
-def val_loss(inputs, labels, model, criterion):
+def val_loss_fn(inputs, labels, model, criterion):
     model.eval()
     outputs = model(inputs)
     val_loss = criterion(outputs, labels)
@@ -70,11 +70,11 @@ with open('sample_classes.txt') as labels_file:
 splits = {} # each list: video ids in that split
 label_list = np.empty(0, dtype=int) # id to label
 id_to_filename = [] # id to filename
-video_info = np.empty((1513, 2), dtype=int) # id to begin/end frames
+video_info = [] # id to begin/end frames
 splits['train'] = np.empty(0, dtype=int)
 splits['val'] = np.empty(0, dtype=int)
 splits['test'] = np.empty(0, dtype=int)
-with open('mini_dataset.csv') as data:
+with open('augmented_mini_dataset.csv') as data:
     reader = csv.reader(data)
     next(reader)
 
@@ -89,7 +89,7 @@ with open('mini_dataset.csv') as data:
         splits[split] = np.append(splits[split], id)
         label_list = np.append(label_list, label_dict[label])
         id_to_filename.append(file_name)
-        video_info[id] = [start_frame, end_frame]
+        video_info.append([start_frame, end_frame])
         id += 1
 
 #prepare for training
@@ -112,6 +112,13 @@ for __, param in model.base_model.named_parameters():
     param.requires_grad = False
 
 # train
+train_losses = []
+train_accs = []
+val_losses = []
+val_accs = []
+min_val_loss = 1000000
+min_val_loss_epoch = -1
+strikes = 0
 for epoch in range(25):
     if epoch % 5 == 0 and epoch <= 15:
         layer_to_unfreeze = 5 - epoch/5
@@ -120,39 +127,51 @@ for epoch in range(25):
                 param.requires_grad = True
 
     # iterate on all train batches of the current epoch by executing the train_batch function
-    train_epoch_losses = []
+    train_curr_epoch_losses = []
     for inputs, labels in tqdm(train_dataloader, desc=f'epoch {str(epoch + 1)} | train'):
         inputs = inputs.to(device)
         labels = labels.to(device)
-        batch_loss = train_batch(inputs, labels, model, optimizer, criterion)
-        train_epoch_losses.append(batch_loss)
-    train_epoch_loss = np.array(train_epoch_losses).mean()
+        train_curr_epoch_losses.append(train_batch(inputs, labels, model, optimizer, criterion))
+    train_loss = round(np.array(train_curr_epoch_losses).mean(), 5)
+    train_losses.append(train_loss)
 
     # iterate on all train batches of the current epoch by calculating their accuracy
-    train_epoch_accuracies = []
+    train_curr_epoch_accuracies = []
     for inputs, labels in tqdm(train_dataloader, desc=f'epoch {str(epoch + 1)} | train_acc'):
         inputs = inputs.to(device)
         labels = labels.to(device)
-        is_correct = accuracy(inputs, labels, model)
-        train_epoch_accuracies.extend(is_correct)
-    train_epoch_accuracy = np.array(train_epoch_accuracies).mean()
+        train_curr_epoch_accuracies.extend(accuracy(inputs, labels, model))
+    train_acc = round(np.array(train_curr_epoch_accuracies).mean(), 5)
+    train_accs.append(train_acc)
 
     # iterate on all batches of val of the current epoch by calculating the accuracy and the loss function
-    val_epoch_accuracies = []
-    val_epoch_losses = []
+    val_curr_epoch_accuracies = []
+    val_curr_epoch_losses = []
     for inputs, labels in tqdm(val_dataloader, desc=f'epoch {str(epoch + 1)} | val'):
         inputs = inputs.to(device)
         labels = labels.to(device)
-        val_is_correct = accuracy(inputs, labels, model)
-        val_epoch_accuracies.extend(val_is_correct)
-        validation_loss = val_loss(inputs, labels, model, criterion)
-        val_epoch_losses.append(validation_loss)
-    val_epoch_accuracy = np.array(val_epoch_accuracies).mean()
-    val_epoch_loss = np.array(val_epoch_losses).mean()
+        val_curr_epoch_losses.append(val_loss_fn(inputs, labels, model, criterion))
+        val_curr_epoch_accuracies.extend(accuracy(inputs, labels, model))
+    val_loss = round(np.array(val_curr_epoch_losses).mean(), 5)
+    val_acc = round(np.array(val_curr_epoch_accuracies).mean(), 5)
+    val_losses.append(val_loss)
+    val_accs.append(val_acc)
 
-    print(train_epoch_loss, train_epoch_accuracy)
-    print(val_epoch_loss, val_epoch_accuracy)
+    print(train_loss, train_acc)
+    print(val_loss, val_acc)
 
+    # early stopping
+    if val_loss < min_val_loss:
+        min_val_loss = val_loss
+        min_val_loss_epoch = epoch
+        strikes = 0
+    else:
+        strikes += 1
+        if strikes == 3:
+            print(f'Stopping early at epoch {epoch + 1}')
+            break
+
+    # save model
     save_obj = {
         'model': model.state_dict(),
         'optimizer': optimizer.state_dict(),
@@ -163,6 +182,13 @@ for epoch in range(25):
     exp_lr_scheduler.step()
     torch.mps.empty_cache()
     print('---------------------------------------------------------')
+
+print(f'Training losses: {train_losses}')
+print(f'Training accuracies: {train_accs}')
+print(f'Validation losses: {val_losses}')
+print(f'Validation accuracies: {val_accs}')
+print(f'Least val loss: {min_val_loss} at epoch {min_val_loss_epoch + 1}')
+print('---------------------------------------------------------')
 
 #test
 actual = []
