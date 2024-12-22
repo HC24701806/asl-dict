@@ -16,9 +16,9 @@ def get_frame(input, frame_num):
     video = cv2.VideoCapture(f'../ASL_Citizen/videos/{input}.mp4')
     video.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
     ret, frame = video.read()
+    video.release()
     if ret:
         return process(frame)
-    print(ret, frame, input, frame_num)
     return None
 
 # transform video data to tensor
@@ -30,7 +30,14 @@ def get_video_data(input, begin_frame, end_frame):
 
     res = torch.empty(16, 3, 256, 256)
     for i, f in enumerate(frames):
-        res[i] = f
+        if f is None: # in case video data loading failed
+            print(input, frame_list[i])
+            if i == 0:
+                res[i] = torch.zeros(3, 256, 256)
+            else:
+                res[i] = res[i - 1]
+        else:
+            res[i] = f
     res = res.permute(1, 0, 2, 3)
     return res
 

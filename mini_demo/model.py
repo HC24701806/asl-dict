@@ -26,10 +26,6 @@ class Model(nn.Module):
                                             nn.ReLU(),
                                             nn.Dropout(0.3),
                                             nn.Linear(128, 50))
-        
-        for name, param in self.base_model.named_parameters():
-            if int(name.split('.')[1]) < 5:
-                param.requires_grad = False
 
     def forward(self, x):
         x = self.base_model(x)
@@ -109,14 +105,18 @@ device = torch.device('mps')
 
 model = Model().to('mps')
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 exp_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
+
+for __, param in model.base_model.named_parameters():
+    param.requires_grad = False
 
 # train
 for epoch in range(25):
-    if epoch == 5:
+    if epoch % 5 == 0 and epoch <= 15:
+        layer_to_unfreeze = 5 - epoch/5
         for name, param in model.named_parameters():
-            if int(name.split('.')[2]) >= 3:
+            if int(name.split('.')[2]) == layer_to_unfreeze:
                 param.requires_grad = True
 
     # iterate on all train batches of the current epoch by executing the train_batch function
