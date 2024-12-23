@@ -65,6 +65,8 @@ with open('sample_classes.txt') as labels_file:
     content = labels_file.readlines()
     i = 0
     for line in content:
+        if i == 5:
+            break
         label_dict[line[:-1]] = i
         i += 1
 
@@ -87,11 +89,12 @@ with open('augmented_mini_dataset.csv') as data:
         end_frame = int(line[3])
         label = line[4]
 
-        splits[split] = np.append(splits[split], id)
-        label_list = np.append(label_list, label_dict[label])
-        id_to_filename.append(file_name)
-        video_info.append([start_frame, end_frame])
-        id += 1
+        if label in label_dict:
+            splits[split] = np.append(splits[split], id)
+            label_list = np.append(label_list, label_dict[label])
+            id_to_filename.append(file_name)
+            video_info.append([start_frame, end_frame])
+            id += 1
 
 #prepare for training
 train_dataset = ClassificationDataset(id_list=splits['train'], label_list=label_list, id_to_filename=id_to_filename, video_info=video_info)
@@ -106,28 +109,28 @@ device = torch.device('mps')
 
 model = Model().to('mps')
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-exp_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.002)
+exp_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.15)
 
 for __, param in model.base_model.named_parameters():
     param.requires_grad = False
 
 # train
-train_losses = np.empty(0, dtype=float)
-train_accs = np.empty(0, dtype=float)
-val_losses = np.empty(0, dtype=float)
-val_accs = np.empty(0, dtype=float)
+train_losses = []
+train_accs = []
+val_losses = []
+val_accs = []
 min_val_loss = 1000000
 min_val_loss_epoch = -1
 strikes = 0
 
-save_path = './models/v1/'
+save_path = './models/v2 (mini_5)/'
 if not os.path.exists(save_path):
     os.mkdir(save_path)
 
 for epoch in range(25):
-    if epoch % 5 == 0 and epoch <= 15:
-        layer_to_unfreeze = 5 - epoch/5
+    if epoch % 4 == 0 and epoch <= 8:
+        layer_to_unfreeze = 5 - epoch/4
         for name, param in model.named_parameters():
             if int(name.split('.')[2]) == layer_to_unfreeze:
                 param.requires_grad = True
@@ -139,16 +142,16 @@ for epoch in range(25):
         labels = labels.to(device)
         train_curr_epoch_losses.append(train_batch(inputs, labels, model, optimizer, criterion))
     train_loss = round(np.array(train_curr_epoch_losses).mean(), 5)
-    train_losses = np.append(train_losses, train_loss)
+    train_losses.append(train_loss)
 
     # iterate on all train batches of the current epoch by calculating their accuracy
-    train_curr_epoch_accuracies = []
+    '''train_curr_epoch_accuracies = []
     for inputs, labels in tqdm(train_dataloader, desc=f'epoch {str(epoch + 1)} | train_acc'):
         inputs = inputs.to(device)
         labels = labels.to(device)
         train_curr_epoch_accuracies.extend(accuracy(inputs, labels, model))
     train_acc = round(np.array(train_curr_epoch_accuracies).mean(), 5)
-    train_accs = np.append(train_accs, train_acc)
+    train_accs.append(train_acc)'''
 
     # iterate on all batches of val of the current epoch by calculating the accuracy and the loss function
     val_curr_epoch_accuracies = []
@@ -160,10 +163,10 @@ for epoch in range(25):
         val_curr_epoch_accuracies.extend(accuracy(inputs, labels, model))
     val_loss = round(np.array(val_curr_epoch_losses).mean(), 5)
     val_acc = round(np.array(val_curr_epoch_accuracies).mean(), 5)
-    val_losses = np.append(val_losses, val_loss)
-    val_accs = np.append(val_accs, val_acc)
+    val_losses.append(val_loss)
+    val_accs.append(val_acc)
 
-    print(train_loss, train_acc)
+    print(train_loss, '''train_acc''')
     print(val_loss, val_acc)
 
     # early stopping

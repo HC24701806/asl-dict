@@ -8,8 +8,7 @@ import torch
 process = v2.Compose([
     v2.ToTensor(),
     v2.Normalize(mean=[0.45, 0.45, 0.45], std=[0.225, 0.225, 0.225]),
-    v2.Resize((256, 256)),
-    v2.CenterCrop(256)
+    v2.Resize((224, 224))
 ])
 
 # get specific frame
@@ -29,12 +28,12 @@ def get_video_data(input, begin_frame, end_frame):
     with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
         frames = executor.map(lambda frame_num: get_frame(input, frame_num), frame_list)
 
-    res = torch.empty(16, 3, 256, 256)
+    res = torch.empty(16, 3, 224, 224)
     for i, f in enumerate(frames):
         if f is None: # in case video data loading failed
             print(input, frame_list[i])
             if i == 0:
-                res[i] = torch.zeros(3, 256, 256)
+                res[i] = torch.zeros(3, 224, 224)
             else:
                 res[i] = res[i - 1]
         else:

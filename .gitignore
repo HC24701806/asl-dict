@@ -1,8 +1,9 @@
 ASL_Citizen/
 augmented_dataset/
 __pycache__/
-ASL_Citizen.zip
+models/
 *_test.py
 *.csv
 *.pth
 *.mp4
+*.zip
