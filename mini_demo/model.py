@@ -106,15 +106,14 @@ device = torch.device('mps')
 
 model = Model().to('mps')
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-exp_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.002)
+exp_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.15)
 
 for __, param in model.base_model.named_parameters():
     param.requires_grad = False
 
 # train
 train_losses = np.empty(0, dtype=float)
-train_accs = np.empty(0, dtype=float)
 val_losses = np.empty(0, dtype=float)
 val_accs = np.empty(0, dtype=float)
 min_val_loss = 1000000
@@ -141,15 +140,6 @@ for epoch in range(25):
     train_loss = round(np.array(train_curr_epoch_losses).mean(), 5)
     train_losses = np.append(train_losses, train_loss)
 
-    # iterate on all train batches of the current epoch by calculating their accuracy
-    train_curr_epoch_accuracies = []
-    for inputs, labels in tqdm(train_dataloader, desc=f'epoch {str(epoch + 1)} | train_acc'):
-        inputs = inputs.to(device)
-        labels = labels.to(device)
-        train_curr_epoch_accuracies.extend(accuracy(inputs, labels, model))
-    train_acc = round(np.array(train_curr_epoch_accuracies).mean(), 5)
-    train_accs = np.append(train_accs, train_acc)
-
     # iterate on all batches of val of the current epoch by calculating the accuracy and the loss function
     val_curr_epoch_accuracies = []
     val_curr_epoch_losses = []
@@ -163,7 +153,7 @@ for epoch in range(25):
     val_losses = np.append(val_losses, val_loss)
     val_accs = np.append(val_accs, val_acc)
 
-    print(train_loss, train_acc)
+    print(train_loss)
     print(val_loss, val_acc)
 
     # early stopping
@@ -190,7 +180,6 @@ for epoch in range(25):
     print('---------------------------------------------------------')
 
 print(f'Training losses: {train_losses}')
-print(f'Training accuracies: {train_accs}')
 print(f'Validation losses: {val_losses}')
 print(f'Validation accuracies: {val_accs}')
 print(f'Least val loss: {min_val_loss} at epoch {min_val_loss_epoch + 1}')
