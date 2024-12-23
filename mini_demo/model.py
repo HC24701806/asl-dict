@@ -106,8 +106,8 @@ device = torch.device('mps')
 
 model = Model().to('mps')
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.002)
-exp_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.15)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
+exp_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.2)
 
 for __, param in model.base_model.named_parameters():
     param.requires_grad = False
@@ -193,7 +193,7 @@ model = model.eval()
 print('Testing')
 with torch.no_grad():
     # cycle on all train batches of the current epoch by calculating their accuracy
-    for inputs, labels in test_dataloader:
+    for inputs, labels in tqdm(test_dataloader, desc=f'test'):
         inputs = inputs.to(device)
         labels = labels.to(device)
         outputs = model(inputs)
