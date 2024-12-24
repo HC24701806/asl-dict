@@ -1,13 +1,12 @@
 import numpy as np
 import cv2
-import os
-import time
 import torch
 from torchvision.transforms import v2
 from concurrent.futures import ThreadPoolExecutor
 
 process = v2.Compose([
-    v2.ToTensor(),
+    v2.ToImage(),
+    v2.ToDtype(torch.float32, scale=True),
     v2.Normalize(mean=[0.45, 0.45, 0.45], std=[0.225, 0.225, 0.225]),
     v2.Resize((224, 224))
 ])
@@ -28,7 +27,7 @@ def get_frame(input, frame_num):
 def get_video_data(input, begin_frame, end_frame):
     frame_list = np.linspace(begin_frame, end_frame - 1, 16).round().astype(int)
     frames = []
-    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+    with ThreadPoolExecutor(max_workers=8) as executor:
         frames = executor.map(lambda frame_num: get_frame(input, frame_num), frame_list)
 
     res = torch.empty(16, 3, 224, 224)
