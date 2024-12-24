@@ -1,9 +1,10 @@
 import numpy as np
 import cv2
 import os
+import time
+import torch
 from torchvision.transforms import v2
 from concurrent.futures import ThreadPoolExecutor
-import torch
 
 process = v2.Compose([
     v2.ToTensor(),
@@ -14,6 +15,8 @@ process = v2.Compose([
 # get specific frame
 def get_frame(input, frame_num):
     video = cv2.VideoCapture(f'../augmented_dataset/{input}.mp4')
+    if not video.isOpened:
+        return None
     video.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
     ret, frame = video.read()
     video.release()

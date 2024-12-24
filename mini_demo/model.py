@@ -98,19 +98,32 @@ train_dataset = ClassificationDataset(id_list=splits['train'], label_list=label_
 val_dataset = ClassificationDataset(id_list=splits['val'], label_list=label_list, id_to_filename=id_to_filename, video_info=video_info)
 test_dataset = ClassificationDataset(id_list=splits['test'], label_list=label_list, id_to_filename=id_to_filename, video_info=video_info)
 
-train_dataloader = DataLoader(dataset=train_dataset, batch_size=8, shuffle=True, drop_last=False)
-val_dataloader = DataLoader(dataset=val_dataset, batch_size=8, shuffle=True, drop_last=False)
-test_dataloader = DataLoader(dataset=test_dataset, batch_size=8, shuffle=True, drop_last=False)
+train_dataloader = DataLoader(dataset=train_dataset, batch_size=4, shuffle=True, drop_last=False)
+val_dataloader = DataLoader(dataset=val_dataset, batch_size=4, shuffle=True, drop_last=False)
+test_dataloader = DataLoader(dataset=test_dataset, batch_size=4, shuffle=True, drop_last=False)
 
 device = torch.device('mps')
 
-model = Model().to('mps')
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
-exp_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.2)
+model = Model().to(device)
 
-for __, param in model.base_model.named_parameters():
-    param.requires_grad = False
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
+exp_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
+start_epoch = 0
+
+past_path = './models/v1/v1_2.pth'
+if past_path != '':
+    saved = torch.load(past_path, map_location=torch.device(device), weights_only=True)
+    start_epoch = saved['epoch'] + 1
+    model.load_state_dict(saved['model'])
+    model = model.to(device)
+    optimizer.load_state_dict(saved['optimizer'])
+    exp_lr_scheduler.load_state_dict(saved['scheduler'])
+
+lowest_unfrozen_layer = max(5 - start_epoch // 5, 2)
+for name, param in model.named_parameters():
+    if int(name.split('.')[2]) < lowest_unfrozen_layer:
+            param.requires_grad = False
 
 # train
 train_losses = np.empty(0, dtype=float)
@@ -124,7 +137,7 @@ save_path = './models/v1/'
 if not os.path.exists(save_path):
     os.mkdir(save_path)
 
-for epoch in range(25):
+for epoch in range(start_epoch, 25):
     if epoch % 5 == 0 and epoch <= 15:
         layer_to_unfreeze = 5 - epoch/5
         for name, param in model.named_parameters():
