@@ -61,7 +61,7 @@ def val_loss_fn(inputs, labels, model, criterion):
     val_loss = criterion(outputs, labels)
     return val_loss.item()
 
-def train(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_path):
+def run_model(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_path):
     #load data
     label_dict = {} # gloss to label (numerical)
     with open('sample_classes.txt') as labels_file:
@@ -258,5 +258,5 @@ def train(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_path)
         target_names = list(label_dict.keys())
         cr = metrics.classification_report(actual, predicted, target_names=target_names)
         with open(os.path.join(save_path, 'report.txt'), 'w') as report:
-            report.write('Title\n\nClassification Report\n\n{}'.format(cr))
+            report.write('Classification Report\n\n{}'.format(cr))
         report.close()
