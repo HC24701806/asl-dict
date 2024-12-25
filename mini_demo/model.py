@@ -112,21 +112,23 @@ def run_model(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_p
     optimizer = torch.optim.Adam(model.parameters(), lr=start_lr)
     exp_lr_scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=min_lr, max_lr=max_lr, mode='triangular2')
     start_epoch = 0
-
-    # loading past checkpoint (blank if creating new model)
     min_val_loss = 1000000
     min_val_loss_epoch = -1
-    if past_path:
-        saved = torch.load(past_path, map_location=torch.device(device), weights_only=True)
+
+    # loading past checkpoint (blank if creating new model)
+    if past_path != '':
+        saved = torch.load(past_path, map_location=torch.device(device))
         start_epoch = saved['epoch'] + 1
-        print(start_epoch)
         model.load_state_dict(saved['model'])
         model = model.to(device)
         optimizer.load_state_dict(saved['optimizer'])
         exp_lr_scheduler.load_state_dict(saved['scheduler'])
         min_val_loss = saved['best_loss']
         min_val_loss_epoch = saved['best_epoch']
+    print(start_epoch + 1)
+    print(min_val_loss, min_val_loss_epoch + 1)
 
+    # freeze layers
     lowest_unfrozen_layer = max(5 - start_epoch // fl_interval, 2)
     for name, param in model.named_parameters():
         if int(name.split('.')[2]) < lowest_unfrozen_layer:
@@ -136,12 +138,12 @@ def run_model(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_p
     train_losses = np.empty(0, dtype=float)
     val_losses = np.empty(0, dtype=float)
     val_accs = np.empty(0, dtype=float)
-    strikes = 0
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
     for epoch in range(start_epoch, 40):
+        # unfreeze layers
         if epoch % fl_interval == 0 and epoch <= 3 * fl_interval:
             layer_to_unfreeze = 5 - epoch/fl_interval
             for name, param in model.named_parameters():
@@ -178,7 +180,6 @@ def run_model(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_p
         if val_loss < min_val_loss:
             min_val_loss = val_loss
             min_val_loss_epoch = epoch
-            strikes = 0
 
             save_obj = {
                 'model': model.state_dict(),
@@ -189,11 +190,10 @@ def run_model(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_p
                 'best_epoch': min_val_loss_epoch
             }
             torch.save(save_obj, os.path.join(save_path, 'best.pth'))
-        else:
-            strikes += 1
-            if strikes == patience:
-                print(f'Stopping early at epoch {epoch + 1}')
-                break
+       
+        if epoch - min_val_loss_epoch > patience:
+            print(f'Stopping early at epoch {epoch + 1}')
+            break
 
         # save model
         save_obj = {
@@ -209,11 +209,12 @@ def run_model(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_p
         torch.mps.empty_cache()
         print('---------------------------------------------------------')
 
-    print(f'Training losses: {train_losses}')
-    print(f'Validation losses: {val_losses}')
-    print(f'Validation accuracies: {val_accs}')
-    print(f'Least val loss: {min_val_loss} at epoch {min_val_loss_epoch + 1}')
-    print('---------------------------------------------------------')
+    with open(os.path.join(save_path, 'losses.txt'), 'w') as ls_file:
+        ls_file.write('epoch\ttrain loss\tval loss\tval acc\n')
+        num_epochs = len(train_losses)
+        for i in range(num_epochs):
+            ls_file.write(f'{i + 1}\t\t{train_losses[i]}\t\t{val_losses[i]}\t\t{val_accs[i]}\n')
+        ls_file.close()
 
     #test
     actual = []
@@ -236,14 +237,13 @@ def run_model(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_p
             total += numero_video
 
         # report predictions and true values to numpy array
-        print('Number of tested videos: ', total)
         actual = np.array(actual)
         predicted = np.array(predicted)
         
         print('Accuracy: ', accuracy_score(actual, predicted))
         print(metrics.classification_report(actual, predicted))
 
-        ## Plot confusion matrix
+        # Plot confusion matrix
         cm = metrics.confusion_matrix(actual, predicted)
 
         fig, ax = plt.subplots(figsize=(50, 30))
@@ -254,7 +254,7 @@ def run_model(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_p
         plt.yticks(rotation=0)
         fig.savefig(os.path.join(save_path, 'confusion_matrix.png'))
 
-        ## Save report in a txt
+        # Save report in a txt
         target_names = list(label_dict.keys())
         cr = metrics.classification_report(actual, predicted, target_names=target_names)
         with open(os.path.join(save_path, 'report.txt'), 'w') as report:
