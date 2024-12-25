@@ -43,7 +43,7 @@ def get_video_data(input, begin_frame, end_frame):
     res = res.permute(1, 0, 2, 3)
     return res
 
-class ClassificationDataset(torch.utils.data.Dataset):
+class Dataset(torch.utils.data.Dataset):
     def __init__(self, id_list, label_list, id_to_filename, video_info) -> None:
         super().__init__()
         self.id_list = id_list

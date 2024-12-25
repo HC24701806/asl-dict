@@ -16,7 +16,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from data import ClassificationDataset
+from data import Dataset
 
 class Model(nn.Module):
     def __init__(self):
@@ -27,6 +27,7 @@ class Model(nn.Module):
                                             nn.ReLU(),
                                             nn.Dropout(0.3),
                                             nn.Linear(128, 50))
+
 
     def forward(self, x):
         x = self.base_model(x)
@@ -97,9 +98,9 @@ with open('augmented_mini_dataset.csv') as data:
             id += 1
 
 #prepare for training
-train_dataset = ClassificationDataset(id_list=splits['train'], label_list=label_list, id_to_filename=id_to_filename, video_info=video_info)
-val_dataset = ClassificationDataset(id_list=splits['val'], label_list=label_list, id_to_filename=id_to_filename, video_info=video_info)
-test_dataset = ClassificationDataset(id_list=splits['test'], label_list=label_list, id_to_filename=id_to_filename, video_info=video_info)
+train_dataset = Dataset(id_list=splits['train'], label_list=label_list, id_to_filename=id_to_filename, video_info=video_info)
+val_dataset = Dataset(id_list=splits['val'], label_list=label_list, id_to_filename=id_to_filename, video_info=video_info)
+test_dataset = Dataset(id_list=splits['test'], label_list=label_list, id_to_filename=id_to_filename, video_info=video_info)
 
 train_dataloader = DataLoader(dataset=train_dataset, batch_size=8, shuffle=True, drop_last=False)
 val_dataloader = DataLoader(dataset=val_dataset, batch_size=8, shuffle=True, drop_last=False)
@@ -109,8 +110,8 @@ device = torch.device('mps')
 
 model = Model().to('mps')
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
-exp_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.15)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+exp_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
 
 for __, param in model.base_model.named_parameters():
     param.requires_grad = False
@@ -123,13 +124,13 @@ min_val_loss = 1000000
 min_val_loss_epoch = -1
 strikes = 0
 
-save_path = './models/v3 (mini_5)/'
+save_path = './models/v4 (mini_5)/'
 if not os.path.exists(save_path):
     os.mkdir(save_path)
 
 for epoch in range(25):
-    if epoch % 3 == 0 and epoch <= 9:
-        layer_to_unfreeze = 5 - epoch/3
+    if epoch % 5 == 0 and epoch <= 10:
+        layer_to_unfreeze = 5 - epoch/5
         for name, param in model.named_parameters():
             if int(name.split('.')[2]) == layer_to_unfreeze:
                 param.requires_grad = True
