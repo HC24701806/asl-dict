@@ -115,8 +115,8 @@ def run_model(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_p
     min_val_loss = 1000000
     min_val_loss_epoch = -1
 
-    # loading past checkpoint (blank if creating new model)
-    if past_path != '':
+    # loading past checkpoint
+    if past_path:
         saved = torch.load(past_path, map_location=torch.device(device))
         start_epoch = saved['epoch'] + 1
         model.load_state_dict(saved['model'])
