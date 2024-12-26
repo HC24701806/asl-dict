@@ -209,9 +209,12 @@ def run_model(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_p
         torch.mps.empty_cache()
         print('---------------------------------------------------------')
 
-    with open(os.path.join(save_path, 'losses.txt'), 'w') as ls_file:
-        ls_file.write('epoch\ttrain loss\tval loss\tval acc\n')
-        num_epochs = len(train_losses)
+    if not os.path.isfile(os.path.join(save_path, 'losses.txt')):
+        with open(os.path.join(save_path, 'losses.txt'), 'w') as ls_file:
+            ls_file.write('epoch\ttrain loss\tval loss\tval acc\n')
+    
+    num_epochs = len(train_losses)
+    with open(os.path.join(save_path, 'losses.txt'), 'a') as ls_file:
         for i in range(num_epochs):
             ls_file.write(f'{i + 1}\t\t{train_losses[i]}\t\t{val_losses[i]}\t\t{val_accs[i]}\n')
         ls_file.close()
