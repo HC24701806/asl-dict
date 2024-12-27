@@ -178,6 +178,15 @@ def run_model(min_lr, max_lr, fl_interval, patience, past_path, save_path):
         print(val_loss, val_acc)
         print(f'Time: {datetime.datetime.now()}')
 
+        # logging
+        if not os.path.isfile(os.path.join(save_path, 'losses.txt')):
+            with open(os.path.join(save_path, 'losses.txt'), 'w') as ls_file:
+                ls_file.write('epoch\ttrain loss\tval loss\tval acc\n')
+        
+        with open(os.path.join(save_path, 'losses.txt'), 'a') as ls_file:
+            ls_file.write(f'{epoch + 1}\t\t{train_loss}\t\t{val_loss}\t\t{val_acc}\n')
+            ls_file.close()
+
         # early stopping
         if val_loss < min_val_loss:
             min_val_loss = val_loss
@@ -207,14 +216,6 @@ def run_model(min_lr, max_lr, fl_interval, patience, past_path, save_path):
             'best_epoch': min_val_loss_epoch
         }
         torch.save(save_obj, os.path.join(save_path, f'{epoch + 1}.pth'))
-
-        if not os.path.isfile(os.path.join(save_path, 'losses.txt')):
-            with open(os.path.join(save_path, 'losses.txt'), 'w') as ls_file:
-                ls_file.write('epoch\ttrain loss\tval loss\tval acc\n')
-        
-        with open(os.path.join(save_path, 'losses.txt'), 'a') as ls_file:
-            ls_file.write(f'{epoch + 1}\t\t{train_loss}\t\t{val_loss}\t\t{val_acc}\n')
-            ls_file.close()
         
         scheduler.step()
         torch.mps.empty_cache()
