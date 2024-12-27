@@ -61,7 +61,7 @@ def val_loss_fn(inputs, labels, model, criterion):
     val_loss = criterion(outputs, labels)
     return val_loss.item()
 
-def run_model(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_path):
+def run_model(min_lr, max_lr, fl_interval, patience, past_path, save_path):
     #load data
     label_dict = {} # gloss to label (numerical)
     with open('sample_classes.txt') as labels_file:
@@ -109,8 +109,8 @@ def run_model(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_p
 
     model = Model().to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=start_lr)
-    exp_lr_scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=min_lr, max_lr=max_lr, mode='triangular2')
+    optimizer = torch.optim.Adam(model.parameters(), lr=min_lr)
+    scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=min_lr, max_lr=max_lr, mode='triangular2', step_size_up=3500, step_size_down=3500)
     start_epoch = 0
     min_val_loss = 1000000
     min_val_loss_epoch = -1
@@ -122,9 +122,11 @@ def run_model(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_p
         model.load_state_dict(saved['model'])
         model = model.to(device)
         optimizer.load_state_dict(saved['optimizer'])
-        exp_lr_scheduler.load_state_dict(saved['scheduler'])
+        scheduler.load_state_dict(saved['scheduler'])
+        scheduler.step()
         min_val_loss = saved['best_loss']
         min_val_loss_epoch = saved['best_epoch']
+
     print(start_epoch + 1)
     print(min_val_loss, min_val_loss_epoch + 1)
 
@@ -184,14 +186,14 @@ def run_model(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_p
             save_obj = {
                 'model': model.state_dict(),
                 'optimizer': optimizer.state_dict(),
-                'scheduler': exp_lr_scheduler.state_dict(),
+                'scheduler': scheduler.state_dict(),
                 'epoch': epoch,
                 'best_loss': min_val_loss,
                 'best_epoch': min_val_loss_epoch
             }
             torch.save(save_obj, os.path.join(save_path, 'best.pth'))
        
-        if epoch - min_val_loss_epoch > patience:
+        if epoch - min_val_loss_epoch >= patience:
             print(f'Stopping early at epoch {epoch + 1}')
             break
 
@@ -199,7 +201,7 @@ def run_model(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_p
         save_obj = {
             'model': model.state_dict(),
             'optimizer': optimizer.state_dict(),
-            'scheduler': exp_lr_scheduler.state_dict(),
+            'scheduler': scheduler.state_dict(),
             'epoch': epoch,
             'best_loss': min_val_loss,
             'best_epoch': min_val_loss_epoch
@@ -214,7 +216,7 @@ def run_model(start_lr, min_lr, max_lr, fl_interval, patience, past_path, save_p
             ls_file.write(f'{epoch + 1}\t\t{train_loss}\t\t{val_loss}\t\t{val_acc}\n')
             ls_file.close()
         
-        exp_lr_scheduler.step()
+        scheduler.step()
         torch.mps.empty_cache()
         print('---------------------------------------------------------')
 
