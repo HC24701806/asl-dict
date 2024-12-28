@@ -28,7 +28,7 @@ class Model(nn.Module):
                                             nn.ReLU(),
                                             nn.Linear(512, 128),
                                             nn.ReLU(),
-                                            nn.Dropout(0.3),
+                                            nn.Dropout(0.35),
                                             nn.Linear(128, 50))
 
     def forward(self, x):
