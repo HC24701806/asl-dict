@@ -196,7 +196,6 @@ total = 0
 model = model.eval()
 print('Testing')
 with torch.no_grad():
-    # cycle on all train batches of the current epoch by calculating their accuracy
     for inputs, labels in tqdm(test_dataloader, desc=f'test'):
         inputs = inputs.to(device)
         labels = labels.to(device)
