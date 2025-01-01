@@ -43,24 +43,30 @@ def predict(frames):
     data = data.to('mps')
     outputs = model(data)
     post_act = torch.nn.Softmax(dim=1)
-    pred = post_act(outputs).topk(k=3).indices[0]
-    print(classes[pred[0]], classes[pred[1]], classes[pred[2]])
+    pred = post_act(outputs).topk(k=3)
+    return pred
 
 # video input
 video = cv2.VideoCapture(0)
-fps = video.get(cv2.CAP_PROP_FPS)
-i = 0
 frames = []
+pred_classes = None
+pred_probs = None
 while video.isOpened():
-    if i == 3 * fps:
-        predict(frames)
-        break
-
     ret, frame = video.read()
     if not ret:
         break
+
     frames.append(frame)
+    if pred_classes != None:
+        for i in range(3):
+            cv2.putText(frame, f'{classes[pred_classes[i]]}: {pred_probs[i]}', (50, 50 + 50 * i), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
     cv2.imshow('video', frame)
-    if cv2.waitKey(1) == ord('q'):
+
+    k = cv2.waitKey(1)
+    if k == ord(' '):
+        pred = predict(frames)
+        pred_classes = pred.indices[0].to('cpu')
+        pred_probs = pred.values[0].detach().to('cpu').numpy()
+        frames = []
+    elif k == ord('q'):
         break
-    i += 1
