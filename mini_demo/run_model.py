@@ -50,32 +50,33 @@ def predict(frames, model):
     return pred
 
 # video input
-model = load_model('./models/v4/best.pth')
-video = cv2.VideoCapture(0)
-frames = []
-recording = False
-pred_classes = None
-pred_probs = None
-while video.isOpened():
-    ret, frame = video.read()
-    if not ret:
-        break
+def run_model(path):
+    model = load_model(path)
+    video = cv2.VideoCapture(0)
+    frames = []
+    recording = False
+    pred_classes = None
+    pred_probs = None
+    while video.isOpened():
+        ret, frame = video.read()
+        if not ret:
+            break
 
-    if recording:
-        frames.append(frame)
-        cv2.circle(frame, (50, 50), 20, (0, 0, 255), -1)
-    elif pred_classes != None:
-        for i in range(3):
-            cv2.putText(frame, f'{classes[pred_classes[i]]}: {pred_probs[i]}', (50, 50 + 50 * i), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
-    cv2.imshow('video', frame)
-
-    k = cv2.waitKey(1)
-    if k == ord(' '):
         if recording:
-            pred = predict(frames, model)
-            pred_classes = pred.indices[0].to('cpu')
-            pred_probs = pred.values[0].detach().to('cpu').numpy()
-            frames = []
-        recording = not recording
-    elif k == ord('q'):
-        break
+            frames.append(frame)
+            cv2.circle(frame, (50, 50), 20, (0, 0, 255), -1)
+        elif pred_classes != None:
+            for i in range(3):
+                cv2.putText(frame, f'{classes[pred_classes[i]]}: {pred_probs[i]}', (50, 50 + 50 * i), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+        cv2.imshow('video', frame)
+
+        k = cv2.waitKey(1)
+        if k == ord(' '):
+            if recording:
+                pred = predict(frames, model)
+                pred_classes = pred.indices[0].to('cpu')
+                pred_probs = pred.values[0].detach().to('cpu').numpy()
+                frames = []
+            recording = not recording
+        elif k == ord('q'):
+            break

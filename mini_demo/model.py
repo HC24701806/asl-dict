@@ -61,7 +61,7 @@ def val_loss_fn(inputs, labels, model, criterion):
     val_loss = criterion(outputs, labels)
     return val_loss.item()
 
-def run_model(min_lr, max_lr, fl_interval, patience, past_path, save_path):
+def make_model(min_lr, max_lr, fl_interval, patience, past_path, save_path):
     #load data
     label_dict = {} # gloss to label (numerical)
     with open('sample_classes.txt') as labels_file:
