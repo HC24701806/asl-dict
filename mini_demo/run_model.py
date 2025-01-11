@@ -7,14 +7,6 @@ from torchvision.transforms import v2
 from concurrent.futures import ThreadPoolExecutor
 from model import Model
 
-# label to class
-classes = []
-with open('sample_classes.txt') as labels_file:
-    content = labels_file.readlines()
-    for line in content:
-        classes.append(line[:-1])
-
-# load model
 def load_model(path):
     model = Model()
     saved = torch.load(path, map_location=torch.device('mps'))
@@ -49,9 +41,18 @@ def predict(frames, model):
     pred = post_act(outputs).topk(k=3)
     return pred
 
-# video input
 def run_model(path):
+    # load model
     model = load_model(path)
+
+    # label to class
+    classes = []
+    with open('sample_classes.txt') as labels_file:
+        content = labels_file.readlines()
+        for line in content:
+            classes.append(line[:-1])
+
+    # video input
     video = cv2.VideoCapture(0)
     frames = []
     recording = False
