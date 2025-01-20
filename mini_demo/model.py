@@ -61,7 +61,7 @@ def val_loss_fn(inputs, labels, model, criterion):
     val_loss = criterion(outputs, labels)
     return val_loss.item()
 
-def make_model(min_lr, max_lr, fl_interval, patience, past_path, save_path):
+def make_model(min_lr, max_lr, decay, fl_interval, patience, past_path, save_path):
     #load data
     label_dict = {} # gloss to label (numerical)
     with open('sample_classes.txt') as labels_file:
@@ -109,7 +109,7 @@ def make_model(min_lr, max_lr, fl_interval, patience, past_path, save_path):
 
     model = Model().to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=min_lr)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=min_lr, weight_decay=decay)
     scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=min_lr, max_lr=max_lr, mode='triangular2', step_size_up=3500, step_size_down=3500)
     start_epoch = 0
     min_val_loss = 1000000
