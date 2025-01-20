@@ -23,18 +23,18 @@ def predict(frames, model):
         v2.Normalize(mean=[0.45, 0.45, 0.45], std=[0.225, 0.225, 0.225]),
         v2.Resize((224, 224))
     ])
+
     frame_list = np.linspace(0, len(frames) - 1, 16).round().astype(int)
     processed_frames = []
     with ThreadPoolExecutor(max_workers=8) as executor:
         processed_frames = executor.map(lambda frame_num: process(frames[frame_num]), frame_list)
-
+    
     data = torch.empty(1, 16, 3, 224, 224)
     for i, f in enumerate(processed_frames):
         data[0][i] = f
     data = data.permute(0, 2, 1, 3, 4)
 
     # predict
-    
     data = data.to('mps')
     outputs = model(data)
     post_act = torch.nn.Softmax(dim=1)
