@@ -110,7 +110,7 @@ def make_model(min_lr, max_lr, decay, fl_interval, patience, past_path, save_pat
     model = Model().to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=min_lr, weight_decay=decay)
-    scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=min_lr, max_lr=max_lr, mode='triangular2', step_size_up=3500, step_size_down=3500)
+    scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=min_lr, max_lr=max_lr, mode='triangular2', step_size_up=4000, step_size_down=4000)
     start_epoch = 0
     min_val_loss = 1000000
     min_val_loss_epoch = -1
