@@ -61,7 +61,50 @@ def val_loss_fn(inputs, labels, model, criterion):
     val_loss = criterion(outputs, labels)
     return val_loss.item()
 
-def make_model(min_lr, max_lr, decay, fl_interval, patience, past_path, save_path):
+def test_model(model, test_dataloader, device, label_dict, path):
+    actual = []
+    predicted = []
+    total = 0
+    print('Testing')
+    with torch.no_grad():
+        for inputs, labels in tqdm(test_dataloader, desc=f'test'):
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            outputs = model(inputs)
+            # Get the predicted classes
+            preds = post_act(outputs)
+            _, pred_classes = torch.max(preds, 1)
+            actual.extend(labels.cpu().numpy().tolist())
+            predicted.extend(pred_classes.cpu().numpy().tolist())
+            numero_video = len(labels.cpu().numpy().tolist())
+            total += numero_video
+
+        # report predictions and true values to numpy array
+        actual = np.array(actual)
+        predicted = np.array(predicted)
+        
+        print('Accuracy: ', accuracy_score(actual, predicted))
+        print(metrics.classification_report(actual, predicted))
+
+        # Plot confusion matrix
+        cm = metrics.confusion_matrix(actual, predicted)
+
+        fig, ax = plt.subplots(figsize=(50, 30))
+        sns.heatmap(cm, annot=True, fmt='d', ax=ax, cmap=plt.cm.Blues,
+                    cbar=False)
+        ax.set(xlabel="Pred", ylabel="True", xticklabels=label_dict.keys(),
+                yticklabels=label_dict.keys(), title="Confusion matrix")
+        plt.yticks(rotation=0)
+        fig.savefig(os.path.join(path, 'confusion_matrix.png'))
+
+        # Save report in a txt
+        target_names = list(label_dict.keys())
+        cr = metrics.classification_report(actual, predicted, target_names=target_names)
+        with open(os.path.join(path, 'report.txt'), 'w') as report:
+            report.write('Classification Report\n\n{}'.format(cr))
+        report.close()
+
+def train_model(min_lr, max_lr, decay, fl_interval, patience, past_path, save_path):
     #load data
     label_dict = {} # gloss to label (numerical)
     with open('sample_classes.txt') as labels_file:
@@ -220,47 +263,9 @@ def make_model(min_lr, max_lr, decay, fl_interval, patience, past_path, save_pat
         scheduler.step()
         torch.mps.empty_cache()
         print('---------------------------------------------------------')
-
+    
     #test
-    actual = []
-    predicted = []
-    total = 0
+    saved = torch.load(os.path.join(save_path, 'best.pth'), map_location=torch.device(device))
+    model.load_state_dict(saved['model'])
     model = model.eval()
-    print('Testing')
-    with torch.no_grad():
-        for inputs, labels in tqdm(test_dataloader, desc=f'test'):
-            inputs = inputs.to(device)
-            labels = labels.to(device)
-            outputs = model(inputs)
-            # Get the predicted classes
-            preds = post_act(outputs)
-            _, pred_classes = torch.max(preds, 1)
-            actual.extend(labels.cpu().numpy().tolist())
-            predicted.extend(pred_classes.cpu().numpy().tolist())
-            numero_video = len(labels.cpu().numpy().tolist())
-            total += numero_video
-
-        # report predictions and true values to numpy array
-        actual = np.array(actual)
-        predicted = np.array(predicted)
-        
-        print('Accuracy: ', accuracy_score(actual, predicted))
-        print(metrics.classification_report(actual, predicted))
-
-        # Plot confusion matrix
-        cm = metrics.confusion_matrix(actual, predicted)
-
-        fig, ax = plt.subplots(figsize=(50, 30))
-        sns.heatmap(cm, annot=True, fmt='d', ax=ax, cmap=plt.cm.Blues,
-                    cbar=False)
-        ax.set(xlabel="Pred", ylabel="True", xticklabels=label_dict.keys(),
-                yticklabels=label_dict.keys(), title="Confusion matrix")
-        plt.yticks(rotation=0)
-        fig.savefig(os.path.join(save_path, 'confusion_matrix.png'))
-
-        # Save report in a txt
-        target_names = list(label_dict.keys())
-        cr = metrics.classification_report(actual, predicted, target_names=target_names)
-        with open(os.path.join(save_path, 'report.txt'), 'w') as report:
-            report.write('Classification Report\n\n{}'.format(cr))
-        report.close()
+    test_model(model, test_dataloader, device, label_dict, save_path)
