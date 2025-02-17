@@ -104,10 +104,10 @@ def test_model(model, test_dataloader, device, label_dict, path):
             report.write('Classification Report\n\n{}'.format(cr))
         report.close()
 
-def train_model(min_lr, max_lr, decay, fl_interval, patience, past_path, save_path):
+def make_model(min_lr, max_lr, decay, fl_interval, patience, past_path, save_path):
     #load data
     label_dict = {} # gloss to label (numerical)
-    with open('sample_classes.txt') as labels_file:
+    with open('classes.txt') as labels_file:
         content = labels_file.readlines()
         i = 0
         for line in content:
@@ -117,7 +117,6 @@ def train_model(min_lr, max_lr, decay, fl_interval, patience, past_path, save_pa
     splits = {} # each list: video ids in that split
     label_list = np.empty(0, dtype=int) # id to label
     id_to_filename = [] # id to filename
-    video_info = [] # id to begin/end frames
     splits['train'] = np.empty(0, dtype=int)
     splits['val'] = np.empty(0, dtype=int)
     splits['test'] = np.empty(0, dtype=int)
@@ -129,24 +128,21 @@ def train_model(min_lr, max_lr, decay, fl_interval, patience, past_path, save_pa
         for line in reader:
             split = line[0]
             file_name = line[1]
-            start_frame = int(line[2])
-            end_frame = int(line[3])
-            label = line[4]
+            label = line[2]
 
             splits[split] = np.append(splits[split], id)
             label_list = np.append(label_list, label_dict[label])
             id_to_filename.append(file_name)
-            video_info.append([start_frame, end_frame])
             id += 1
 
     #prepare for training
-    train_dataset = Dataset(id_list=splits['train'], label_list=label_list, id_to_filename=id_to_filename, video_info=video_info)
-    val_dataset = Dataset(id_list=splits['val'], label_list=label_list, id_to_filename=id_to_filename, video_info=video_info)
-    test_dataset = Dataset(id_list=splits['test'], label_list=label_list, id_to_filename=id_to_filename, video_info=video_info)
+    train_dataset = Dataset(id_list=splits['train'], label_list=label_list, id_to_filename=id_to_filename)
+    val_dataset = Dataset(id_list=splits['val'], label_list=label_list, id_to_filename=id_to_filename)
+    test_dataset = Dataset(id_list=splits['test'], label_list=label_list, id_to_filename=id_to_filename)
 
-    train_dataloader = DataLoader(dataset=train_dataset, batch_size=4, shuffle=True, drop_last=False)
-    val_dataloader = DataLoader(dataset=val_dataset, batch_size=4, shuffle=True, drop_last=False)
-    test_dataloader = DataLoader(dataset=test_dataset, batch_size=4, shuffle=True, drop_last=False)
+    train_dataloader = DataLoader(dataset=train_dataset, batch_size=8, shuffle=True, drop_last=False)
+    val_dataloader = DataLoader(dataset=val_dataset, batch_size=8, shuffle=True, drop_last=False)
+    test_dataloader = DataLoader(dataset=test_dataset, batch_size=8, shuffle=True, drop_last=False)
 
     device = torch.device('mps')
 
