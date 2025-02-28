@@ -24,12 +24,10 @@ class Model(nn.Module):
         super().__init__()
         self.base_model = torch.hub.load('facebookresearch/pytorchvideo', 'slow_r50', pretrained=True)
         self.base_model.blocks[5].proj = nn.Sequential(
-                                            nn.Linear(2048, 512),
+                                            nn.Linear(2048, 128),
                                             nn.ReLU(),
-                                            nn.Linear(512, 128),
-                                            nn.ReLU(),
-                                            nn.Dropout(0.35),
-                                            nn.Linear(128, 50))
+                                            nn.Dropout(0.375),
+                                            nn.Linear(128, 30))
 
     def forward(self, x):
         return self.base_model(x)
@@ -149,7 +147,7 @@ def make_model(min_lr, max_lr, decay, fl_interval, patience, past_path, save_pat
     model = Model().to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=min_lr, weight_decay=decay)
-    scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=min_lr, max_lr=max_lr, mode='triangular2', step_size_up=4000, step_size_down=4000)
+    scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=min_lr, max_lr=max_lr, mode='triangular2', step_size_up=2500, step_size_down=2500)
     start_epoch = 0
     min_val_loss = 1000000
     min_val_loss_epoch = -1
@@ -170,7 +168,7 @@ def make_model(min_lr, max_lr, decay, fl_interval, patience, past_path, save_pat
     print(min_val_loss, min_val_loss_epoch + 1)
 
     # freeze layers
-    lowest_unfrozen_layer = max(5 - start_epoch // fl_interval, 2)
+    lowest_unfrozen_layer = max(5 - start_epoch // fl_interval, 3)
     for name, param in model.named_parameters():
         if int(name.split('.')[2]) < lowest_unfrozen_layer:
             param.requires_grad = False
@@ -185,7 +183,7 @@ def make_model(min_lr, max_lr, decay, fl_interval, patience, past_path, save_pat
 
     for epoch in range(start_epoch, 40):
         # unfreeze layers
-        if epoch % fl_interval == 0 and epoch <= 3 * fl_interval:
+        if epoch % fl_interval == 0 and epoch <= 2 * fl_interval:
             layer_to_unfreeze = 5 - epoch/fl_interval
             for name, param in model.named_parameters():
                 if int(name.split('.')[2]) == layer_to_unfreeze:

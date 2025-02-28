@@ -24,12 +24,12 @@ def predict(frames, model):
         v2.Resize((224, 224))
     ])
 
-    frame_list = np.linspace(0, len(frames) - 1, 16).round().astype(int)
+    frame_list = np.linspace(0, len(frames) - 1, 8).round().astype(int)
     processed_frames = []
     with ThreadPoolExecutor(max_workers=8) as executor:
         processed_frames = executor.map(lambda frame_num: process(frames[frame_num]), frame_list)
     
-    data = torch.empty(1, 16, 3, 224, 224)
+    data = torch.empty(1, 8, 3, 224, 224)
     for i, f in enumerate(processed_frames):
         data[0][i] = f
     data = data.permute(0, 2, 1, 3, 4)
@@ -47,7 +47,7 @@ def run_model(path):
 
     # label to class
     classes = []
-    with open('sample_classes.txt') as labels_file:
+    with open('classes.txt') as labels_file:
         content = labels_file.readlines()
         for line in content:
             classes.append(line[:-1])

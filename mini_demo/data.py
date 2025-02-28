@@ -1,4 +1,3 @@
-import numpy as np
 import cv2
 import torch
 from torchvision.transforms import v2
@@ -29,7 +28,7 @@ def get_video_data(input):
     with ThreadPoolExecutor(max_workers=1) as executor:
         frames = executor.map(lambda frame_num: get_frame(input, frame_num), frame_list)
 
-    res = torch.empty(16, 3, 224, 224)
+    res = torch.empty(8, 3, 224, 224)
     for i, f in enumerate(frames):
         if f is None: # in case video data loading failed
             if i == 0:
